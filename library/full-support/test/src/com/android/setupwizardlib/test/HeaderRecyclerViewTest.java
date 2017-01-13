@@ -16,28 +16,42 @@
 
 package com.android.setupwizardlib.test;
 
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.verify;
+
+import android.support.test.InstrumentationRegistry;
+import android.support.test.filters.SmallTest;
+import android.support.test.runner.AndroidJUnit4;
 import android.support.v7.widget.RecyclerView;
-import android.test.AndroidTestCase;
-import android.test.suitebuilder.annotation.SmallTest;
 import android.view.View;
 import android.view.ViewGroup;
 
 import com.android.setupwizardlib.view.HeaderRecyclerView.HeaderAdapter;
 
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
 /**
  * Test for {@link com.android.setupwizardlib.view.HeaderRecyclerView}
  */
-public class HeaderRecyclerViewTest extends AndroidTestCase {
+@RunWith(AndroidJUnit4.class)
+@SmallTest
+public class HeaderRecyclerViewTest {
 
     private TestAdapter mWrappedAdapter;
-    private TestDataObserver mObserver;
     private HeaderAdapter mHeaderAdapter;
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+    @Mock
+    private RecyclerView.AdapterDataObserver mObserver;
+
+    @Before
+    public void setUp() {
+        MockitoAnnotations.initMocks(this);
+
         mWrappedAdapter = new TestAdapter();
-        mObserver = new TestDataObserver();
 
         mHeaderAdapter = new HeaderAdapter(mWrappedAdapter);
         mHeaderAdapter.registerAdapterDataObserver(mObserver);
@@ -46,117 +60,99 @@ public class HeaderRecyclerViewTest extends AndroidTestCase {
     /**
      * Test that notifyDataSetChanged gets propagated by HeaderRecyclerView's adapter.
      */
-    @SmallTest
+    @Test
     public void testNotifyChanged() {
         mWrappedAdapter.notifyDataSetChanged();
 
-        assertEquals("onChanged", mObserver.lastNotification);
+        verify(mObserver).onChanged();
     }
 
     /**
      * Test that notifyItemChanged gets propagated by HeaderRecyclerView's adapter.
      */
-    @SmallTest
+    @Test
     public void testNotifyItemChangedNoHeader() {
         mWrappedAdapter.notifyItemChanged(12);
 
-        assertEquals("onItemRangeChanged", mObserver.lastNotification);
-        assertEquals(12, mObserver.lastArg1);
-        assertEquals(1, mObserver.lastArg2);
+        verify(mObserver).onItemRangeChanged(eq(12), eq(1), eq(null));
     }
 
     /**
      * Test that notifyItemChanged gets propagated by HeaderRecyclerView's adapter and adds 1 to the
      * position for the extra header items.
      */
-    @SmallTest
+    @Test
     public void testNotifyItemChangedWithHeader() {
-        mHeaderAdapter.setHeader(new View(getContext()));
+        mHeaderAdapter.setHeader(new View(InstrumentationRegistry.getTargetContext()));
         mWrappedAdapter.notifyItemChanged(12);
 
-        assertEquals("onItemRangeChanged", mObserver.lastNotification);
-        assertEquals(13, mObserver.lastArg1);
-        assertEquals(1, mObserver.lastArg2);
+        verify(mObserver).onItemRangeChanged(eq(13), eq(1), eq(null));
     }
 
     /**
      * Test that notifyItemInserted gets propagated by HeaderRecyclerView's adapter.
      */
-    @SmallTest
+    @Test
     public void testNotifyItemInsertedNoHeader() {
         mWrappedAdapter.notifyItemInserted(12);
 
-        assertEquals("onItemRangeInserted", mObserver.lastNotification);
-        assertEquals(12, mObserver.lastArg1);
-        assertEquals(1, mObserver.lastArg2);
+        verify(mObserver).onItemRangeInserted(eq(12), eq(1));
     }
 
     /**
      * Test that notifyItemInserted gets propagated by HeaderRecyclerView's adapter and adds 1 to
      * the position for the extra header item.
      */
-    @SmallTest
+    @Test
     public void testNotifyItemInsertedWithHeader() {
-        mHeaderAdapter.setHeader(new View(getContext()));
+        mHeaderAdapter.setHeader(new View(InstrumentationRegistry.getTargetContext()));
         mWrappedAdapter.notifyItemInserted(12);
 
-        assertEquals("onItemRangeInserted", mObserver.lastNotification);
-        assertEquals(13, mObserver.lastArg1);
-        assertEquals(1, mObserver.lastArg2);
+        verify(mObserver).onItemRangeInserted(eq(13), eq(1));
     }
 
     /**
      * Test that notifyItemRemoved gets propagated by HeaderRecyclerView's adapter.
      */
-    @SmallTest
+    @Test
     public void testNotifyItemRemovedNoHeader() {
         mWrappedAdapter.notifyItemRemoved(12);
 
-        assertEquals("onItemRangeRemoved", mObserver.lastNotification);
-        assertEquals(12, mObserver.lastArg1);
-        assertEquals(1, mObserver.lastArg2);
+        verify(mObserver).onItemRangeRemoved(eq(12), eq(1));
     }
 
     /**
      * Test that notifyItemRemoved gets propagated by HeaderRecyclerView's adapter and adds 1 to
      * the position for the extra header item.
      */
-    @SmallTest
+    @Test
     public void testNotifyItemRemovedWithHeader() {
-        mHeaderAdapter.setHeader(new View(getContext()));
+        mHeaderAdapter.setHeader(new View(InstrumentationRegistry.getTargetContext()));
         mWrappedAdapter.notifyItemRemoved(12);
 
-        assertEquals("onItemRangeRemoved", mObserver.lastNotification);
-        assertEquals(13, mObserver.lastArg1);
-        assertEquals(1, mObserver.lastArg2);
+        verify(mObserver).onItemRangeRemoved(eq(13), eq(1));
     }
 
     /**
      * Test that notifyItemMoved gets propagated by HeaderRecyclerView's adapter.
      */
-    @SmallTest
+    @Test
     public void testNotifyItemMovedNoHeader() {
         mWrappedAdapter.notifyItemMoved(12, 18);
 
-        assertEquals("onItemRangeMoved", mObserver.lastNotification);
-        assertEquals(12, mObserver.lastArg1);
-        assertEquals(18, mObserver.lastArg2);
-        assertEquals(1, mObserver.lastArg3);
+        verify(mObserver).onItemRangeMoved(eq(12), eq(18), eq(1));
     }
 
     /**
      * Test that notifyItemMoved gets propagated by HeaderRecyclerView's adapter and adds 1 to
      * the position for the extra header item.
      */
-    @SmallTest
+    @Test
     public void testNotifyItemMovedWithHeader() {
-        mHeaderAdapter.setHeader(new View(getContext()));
+        mHeaderAdapter.setHeader(new View(InstrumentationRegistry.getTargetContext()));
         mWrappedAdapter.notifyItemMoved(12, 18);
 
-        assertEquals("onItemRangeMoved", mObserver.lastNotification);
-        assertEquals(13, mObserver.lastArg1);
-        assertEquals(19, mObserver.lastArg2);
-        assertEquals(1, mObserver.lastArg3);
+        verify(mObserver).onItemRangeMoved(eq(13), eq(19), eq(1));
     }
 
     /**
@@ -176,57 +172,6 @@ public class HeaderRecyclerViewTest extends AndroidTestCase {
         @Override
         public int getItemCount() {
             return 0;
-        }
-    }
-
-    /**
-     * Test observer which stores the last observed notification.
-     */
-    // TODO: set up mockito for this instead
-    public static class TestDataObserver extends RecyclerView.AdapterDataObserver {
-
-        public String lastNotification;
-        public int lastArg1 = -1;
-        public int lastArg2 = -1;
-        public int lastArg3 = -1;
-
-        @Override
-        public void onChanged() {
-            super.onChanged();
-            lastNotification = "onChanged";
-        }
-
-        @Override
-        public void onItemRangeChanged(int positionStart, int itemCount) {
-            super.onItemRangeChanged(positionStart, itemCount);
-            lastNotification = "onItemRangeChanged";
-            lastArg1 = positionStart;
-            lastArg2 = itemCount;
-        }
-
-        @Override
-        public void onItemRangeInserted(int positionStart, int itemCount) {
-            super.onItemRangeInserted(positionStart, itemCount);
-            lastNotification = "onItemRangeInserted";
-            lastArg1 = positionStart;
-            lastArg2 = itemCount;
-        }
-
-        @Override
-        public void onItemRangeMoved(int fromPosition, int toPosition, int itemCount) {
-            super.onItemRangeMoved(fromPosition, toPosition, itemCount);
-            lastNotification = "onItemRangeMoved";
-            lastArg1 = fromPosition;
-            lastArg2 = toPosition;
-            lastArg3 = itemCount;
-        }
-
-        @Override
-        public void onItemRangeRemoved(int positionStart, int itemCount) {
-            super.onItemRangeRemoved(positionStart, itemCount);
-            lastNotification = "onItemRangeRemoved";
-            lastArg1 = positionStart;
-            lastArg2 = itemCount;
         }
     }
 }
