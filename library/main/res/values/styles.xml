@@ -132,6 +132,12 @@
         <item name="android:textColor">@android:color/white</item>
     </style>
 
+    <!-- Button styles -->
+
+    <style name="SuwButtonItem" />
+
+    <style name="SuwButtonItem.Colored" parent="SuwGlifButton.Primary" />
+
     <!-- Items styles -->
 
     <style name="SuwItemContainer.Description" parent="SuwItemContainer">

@@ -14,13 +14,17 @@
  * limitations under the License.
  */
 
-package com.android.setupwizardlib;
+package com.android.setupwizardlib.test.util;
 
-import org.robolectric.annotation.Config;
+import android.support.v7.app.AppCompatActivity;
 
-@Config(
-        manifest = "main/AndroidManifest.xml",
-        sdk = 23
-)
-public class BaseRobolectricTest {
+/**
+ * Activity to test view and drawable drawing behaviors. This is used to make sure that the drawing
+ * behavior tested is the same as it would when inflated as part of an {@link AppCompatActivity},
+ * including custom layout inflaters and theme values that the support library injects to the
+ * activity.
+ *
+ * @see DrawingTestHelper
+ */
+public class DrawingTestActivity extends AppCompatActivity {
 }

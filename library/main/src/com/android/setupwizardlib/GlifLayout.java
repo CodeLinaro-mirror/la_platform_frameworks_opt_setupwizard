@@ -24,8 +24,8 @@ import android.content.res.TypedArray;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Build.VERSION_CODES;
+import android.support.annotation.LayoutRes;
 import android.util.AttributeSet;
-import android.view.InflateException;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,6 +33,7 @@ import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.android.setupwizardlib.template.ButtonFooterMixin;
 import com.android.setupwizardlib.template.ColoredHeaderMixin;
 import com.android.setupwizardlib.template.HeaderMixin;
 import com.android.setupwizardlib.template.IconMixin;
@@ -93,6 +94,7 @@ public class GlifLayout extends TemplateLayout {
         registerMixin(HeaderMixin.class, new ColoredHeaderMixin(this, attrs, defStyleAttr));
         registerMixin(IconMixin.class, new IconMixin(this, attrs, defStyleAttr));
         registerMixin(ProgressBarMixin.class, new ProgressBarMixin(this));
+        registerMixin(ButtonFooterMixin.class, new ButtonFooterMixin(this));
 
         TypedArray a = getContext().obtainStyledAttributes(attrs,
                 R.styleable.SuwGlifLayout, defStyleAttr, 0);
@@ -113,18 +115,11 @@ public class GlifLayout extends TemplateLayout {
     }
 
     @Override
-    protected View onInflateTemplate(LayoutInflater inflater, int template) {
+    protected View onInflateTemplate(LayoutInflater inflater, @LayoutRes int template) {
         if (template == 0) {
             template = R.layout.suw_glif_template;
         }
-        try {
-            return super.onInflateTemplate(inflater, template);
-        } catch (RuntimeException e) {
-            // Versions before M throws RuntimeException for unsuccessful attribute resolution
-            // Versions M+ will throw an InflateException (which extends from RuntimeException)
-            throw new InflateException("Unable to inflate layout. Are you using "
-                    + "@style/SuwThemeGlif (or its descendant) as your theme?", e);
-        }
+        return inflateTemplate(inflater, R.style.SuwThemeGlif_Light, template);
     }
 
     @Override
