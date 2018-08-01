@@ -22,17 +22,26 @@ import android.content.res.TypedArray;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.Animatable;
 import android.media.MediaPlayer;
+import android.media.MediaPlayer.OnErrorListener;
+import android.media.MediaPlayer.OnInfoListener;
+import android.media.MediaPlayer.OnPreparedListener;
+import android.media.MediaPlayer.OnSeekCompleteListener;
+import android.net.Uri;
 import android.os.Build.VERSION_CODES;
-import android.support.annotation.Nullable;
-import android.support.annotation.RawRes;
-import android.support.annotation.VisibleForTesting;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Surface;
 import android.view.TextureView;
+import android.view.TextureView.SurfaceTextureListener;
 import android.view.View;
 
+import androidx.annotation.Nullable;
+import androidx.annotation.RawRes;
+import androidx.annotation.VisibleForTesting;
+
 import com.android.setupwizardlib.R;
+
+import java.io.IOException;
 
 /**
  * A view for displaying videos in a continuous loop (without audio). This is typically used for
@@ -48,10 +57,11 @@ import com.android.setupwizardlib.R;
  */
 @TargetApi(VERSION_CODES.ICE_CREAM_SANDWICH)
 public class IllustrationVideoView extends TextureView implements Animatable,
-        TextureView.SurfaceTextureListener,
-        MediaPlayer.OnPreparedListener,
-        MediaPlayer.OnSeekCompleteListener,
-        MediaPlayer.OnInfoListener {
+        SurfaceTextureListener,
+        OnPreparedListener,
+        OnSeekCompleteListener,
+        OnInfoListener,
+        OnErrorListener {
 
     private static final String TAG = "IllustrationVideoView";
 
@@ -62,14 +72,19 @@ public class IllustrationVideoView extends TextureView implements Animatable,
 
     private @RawRes int mVideoResId = 0;
 
+    private String mVideoResPackageName;
+
     @VisibleForTesting Surface mSurface;
+
+    private boolean mPrepared;
 
     public IllustrationVideoView(Context context, AttributeSet attrs) {
         super(context, attrs);
         final TypedArray a = context.obtainStyledAttributes(attrs,
                 R.styleable.SuwIllustrationVideoView);
-        mVideoResId = a.getResourceId(R.styleable.SuwIllustrationVideoView_suwVideo, 0);
+        final int videoResId = a.getResourceId(R.styleable.SuwIllustrationVideoView_suwVideo, 0);
         a.recycle();
+        setVideoResource(videoResId);
 
         // By default the video scales without interpolation, resulting in jagged edges in the
         // video. This works around it by making the view go through scaling, which will apply
@@ -98,16 +113,30 @@ public class IllustrationVideoView extends TextureView implements Animatable,
                 MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
     }
 
+
+    /**
+     * Set the video and video package name to be played by this view.
+     *
+     * @param videoResId Resource ID of the video, typically an MP4 under res/raw.
+     * @param videoResPackageName The package name of videoResId.
+     */
+    public void setVideoResource(@RawRes int videoResId, String videoResPackageName) {
+        if (videoResId != mVideoResId
+                || (videoResPackageName != null && !videoResPackageName.equals(
+                mVideoResPackageName))) {
+            mVideoResId = videoResId;
+            mVideoResPackageName = videoResPackageName;
+            createMediaPlayer();
+        }
+    }
+
     /**
      * Set the video to be played by this view.
      *
      * @param resId Resource ID of the video, typically an MP4 under res/raw.
      */
     public void setVideoResource(@RawRes int resId) {
-        if (resId != mVideoResId) {
-            mVideoResId = resId;
-            createMediaPlayer();
-        }
+        setVideoResource(resId, getContext().getPackageName());
     }
 
     @Override
@@ -124,7 +153,7 @@ public class IllustrationVideoView extends TextureView implements Animatable,
      * Creates a media player for the current URI. The media player will be started immediately if
      * the view's window is visible. If there is an existing media player, it will be released.
      */
-    private void createMediaPlayer() {
+    protected void createMediaPlayer() {
         if (mMediaPlayer != null) {
             mMediaPlayer.release();
         }
@@ -132,25 +161,47 @@ public class IllustrationVideoView extends TextureView implements Animatable,
             return;
         }
 
-        mMediaPlayer = MediaPlayer.create(getContext(), mVideoResId);
+        mMediaPlayer = new MediaPlayer();
 
-        if (mMediaPlayer != null) {
-            mMediaPlayer.setSurface(mSurface);
-            mMediaPlayer.setOnPreparedListener(this);
-            mMediaPlayer.setOnSeekCompleteListener(this);
-            mMediaPlayer.setOnInfoListener(this);
+        mMediaPlayer.setSurface(mSurface);
+        mMediaPlayer.setOnPreparedListener(this);
+        mMediaPlayer.setOnSeekCompleteListener(this);
+        mMediaPlayer.setOnInfoListener(this);
+        mMediaPlayer.setOnErrorListener(this);
 
-            float aspectRatio =
-                    (float) mMediaPlayer.getVideoHeight() / mMediaPlayer.getVideoWidth();
-            if (mAspectRatio != aspectRatio) {
-                mAspectRatio = aspectRatio;
-                requestLayout();
-            }
-        } else {
-            Log.wtf(TAG, "Unable to initialize media player for video view");
+        setVideoResourceInternal(mVideoResId, mVideoResPackageName);
+    }
+
+    private void setVideoResourceInternal(@RawRes int videoRes, String videoResPackageName) {
+        Uri uri = Uri.parse("android.resource://" + videoResPackageName + "/" + videoRes);
+        try {
+            mMediaPlayer.setDataSource(getContext(), uri);
+            mMediaPlayer.prepareAsync();
+        } catch (IOException e) {
+            Log.wtf(TAG, "Unable to set data source", e);
         }
-        if (getWindowVisibility() == View.VISIBLE) {
-            start();
+    }
+
+    protected void createSurface() {
+        if (mSurface != null) {
+            mSurface.release();
+            mSurface = null;
+        }
+        // Reattach only if it has been previously released
+        SurfaceTexture surfaceTexture = getSurfaceTexture();
+        if (surfaceTexture != null) {
+            setVisibility(View.INVISIBLE);
+            mSurface = new Surface(surfaceTexture);
+        }
+    }
+
+    @Override
+    protected void onWindowVisibilityChanged(int visibility) {
+        super.onWindowVisibilityChanged(visibility);
+        if (visibility == View.VISIBLE) {
+            reattach();
+        } else {
+            release();
         }
     }
 
@@ -168,14 +219,35 @@ public class IllustrationVideoView extends TextureView implements Animatable,
      */
     public void release() {
         if (mMediaPlayer != null) {
-            mMediaPlayer.stop();
             mMediaPlayer.release();
             mMediaPlayer = null;
+            mPrepared = false;
         }
         if (mSurface != null) {
             mSurface.release();
             mSurface = null;
         }
+    }
+
+    private void reattach() {
+        if (mSurface == null) {
+            initVideo();
+        }
+    }
+
+    private void initVideo() {
+        if (getWindowVisibility() != View.VISIBLE) {
+            return;
+        }
+        createSurface();
+        if (mSurface != null) {
+            createMediaPlayer();
+        } else {
+            Log.w(TAG, "Surface creation failed");
+        }
+    }
+
+    protected void onRenderingStart() {
     }
 
     /* SurfaceTextureListener methods */
@@ -184,8 +256,7 @@ public class IllustrationVideoView extends TextureView implements Animatable,
     public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int width, int height) {
         // Keep the view hidden until video starts
         setVisibility(View.INVISIBLE);
-        mSurface = new Surface(surfaceTexture);
-        createMediaPlayer();
+        initVideo();
     }
 
     @Override
@@ -206,14 +277,14 @@ public class IllustrationVideoView extends TextureView implements Animatable,
 
     @Override
     public void start() {
-        if (mMediaPlayer != null && !mMediaPlayer.isPlaying()) {
+        if (mPrepared && mMediaPlayer != null && !mMediaPlayer.isPlaying()) {
             mMediaPlayer.start();
         }
     }
 
     @Override
     public void stop() {
-        if (mMediaPlayer != null) {
+        if (mPrepared && mMediaPlayer != null) {
             mMediaPlayer.pause();
         }
     }
@@ -230,21 +301,52 @@ public class IllustrationVideoView extends TextureView implements Animatable,
         if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
             // Video available, show view now
             setVisibility(View.VISIBLE);
+            onRenderingStart();
         }
         return false;
     }
 
     @Override
     public void onPrepared(MediaPlayer mp) {
+        mPrepared = true;
         mp.setLooping(shouldLoop());
+
+        float aspectRatio = 0.0f;
+        if (mp.getVideoWidth() > 0 && mp.getVideoHeight() > 0) {
+            aspectRatio = (float) mp.getVideoHeight() / mp.getVideoWidth();
+        } else {
+            Log.w(TAG, "Unexpected video size=" + mp.getVideoWidth() + "x"
+                    + mp.getVideoHeight());
+        }
+        if (Float.compare(mAspectRatio, aspectRatio) != 0) {
+            mAspectRatio = aspectRatio;
+            requestLayout();
+        }
+        if (getWindowVisibility() == View.VISIBLE) {
+            start();
+        }
     }
 
     @Override
     public void onSeekComplete(MediaPlayer mp) {
-        mp.start();
+        if (isPrepared()) {
+            mp.start();
+        } else {
+            Log.wtf(TAG, "Seek complete but media player not prepared");
+        }
     }
 
     public int getCurrentPosition() {
         return mMediaPlayer == null ? 0 : mMediaPlayer.getCurrentPosition();
+    }
+
+    protected boolean isPrepared() {
+        return mPrepared;
+    }
+
+    @Override
+    public boolean onError(MediaPlayer mediaPlayer, int what, int extra) {
+        Log.w(TAG, "MediaPlayer error. what=" + what + " extra=" + extra);
+        return false;
     }
 }

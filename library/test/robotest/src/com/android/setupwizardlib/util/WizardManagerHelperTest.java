@@ -29,7 +29,8 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.provider.Settings.Global;
 import android.provider.Settings.Secure;
-import android.support.annotation.StyleRes;
+
+import androidx.annotation.StyleRes;
 
 import com.android.setupwizardlib.R;
 import com.android.setupwizardlib.robolectric.SuwLibRobolectricTestRunner;
@@ -158,6 +159,22 @@ public class WizardManagerHelperTest {
                 unexpectedIntentThemes.isEmpty());
         assertTrue("String themes " + unexpectedStringThemes + " should not be light",
                 unexpectedStringThemes.isEmpty());
+    }
+
+    @Test
+    public void getThemeRes_whenOldestSupportedThemeTakeEffect_shouldReturnDefault() {
+        Intent intent = new Intent();
+        intent.putExtra(WizardManagerHelper.EXTRA_THEME, "material");
+        assertEquals(0,
+                WizardManagerHelper.getThemeRes(intent, 0, WizardManagerHelper.THEME_GLIF_V2));
+    }
+
+    @Test
+    public void getThemeRes_whenOldestSupportedThemeNotTakeEffect_shouldReturnCurrent() {
+        Intent intent = new Intent();
+        intent.putExtra(WizardManagerHelper.EXTRA_THEME, "glif_v3");
+        assertEquals(R.style.SuwThemeGlifV3,
+                WizardManagerHelper.getThemeRes(intent, 0, WizardManagerHelper.THEME_GLIF_V2));
     }
 
     @Test

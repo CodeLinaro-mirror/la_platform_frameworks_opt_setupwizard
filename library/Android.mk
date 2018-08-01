@@ -7,7 +7,7 @@ include $(CLEAR_VARS)
 
 LOCAL_USE_AAPT2 := true
 LOCAL_JAVA_LIBRARIES := \
-    android-support-annotations
+    androidx.annotation_annotation
 LOCAL_MANIFEST_FILE := main/AndroidManifest.xml
 LOCAL_MODULE := setup-wizard-lib
 LOCAL_RESOURCE_DIR := \
@@ -15,6 +15,7 @@ LOCAL_RESOURCE_DIR := \
     $(LOCAL_PATH)/platform/res
 LOCAL_SDK_VERSION := current
 LOCAL_SRC_FILES := $(call all-java-files-under, main/src platform/src)
+LOCAL_MIN_SDK_VERSION := 23
 
 include $(BUILD_STATIC_JAVA_LIBRARY)
 
@@ -40,12 +41,14 @@ LOCAL_SDK_VERSION := current
 LOCAL_SRC_FILES := $(call all-java-files-under, main/src gingerbread/src recyclerview/src)
 
 LOCAL_JAVA_LIBRARIES := \
-    android-support-annotations
+    androidx.annotation_annotation
 
 LOCAL_SHARED_ANDROID_LIBRARIES := \
-    android-support-compat \
-    android-support-core-ui \
-    android-support-v7-appcompat \
-    android-support-v7-recyclerview
+    androidx.core_core \
+    androidx.legacy_legacy-support-core-ui \
+    androidx.appcompat_appcompat \
+    androidx.recyclerview_recyclerview
+
+LOCAL_MIN_SDK_VERSION := 14
 
 include $(BUILD_STATIC_JAVA_LIBRARY)
